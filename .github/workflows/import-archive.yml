@@ -1,0 +1,129 @@
+name: Import verified Phase 2 archive
+
+on:
+  push:
+    branches:
+      - import/phase2-histopathology
+    paths:
+      - '*.zip'
+      - '**/*.zip'
+      - .github/workflows/import-archive.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out project branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify and unpack the prepared archive
+        run: |
+          python - <<'PY'
+          from hashlib import sha256
+          from pathlib import Path, PurePosixPath
+          from zipfile import ZipFile
+          import stat
+
+          expected_sha = '8522679fd0d2a2d7bb94b4e8a4ebe732010a33210a7d9a5bc0b8dbb7860d195f'
+          expected_paths = set("""
+          .gitattributes
+          .github/workflows/ci.yml
+          .gitignore
+          CREDITS.md
+          README.md
+          docs/DATA.md
+          docs/PHASE2_REQUIREMENTS.md
+          docs/PROVENANCE.json
+          docs/REPRODUCIBILITY.md
+          docs/REVIEW.md
+          figures/README.md
+          figures/class_balance_v2.png
+          figures/gradcam_negative_v2.png
+          figures/gradcam_positive_v2.png
+          figures/train_validation_metrics_v2.png
+          notebooks/README.md
+          notebooks/phase2_version1.ipynb
+          notebooks/phase2_version2.ipynb
+          references/CI_CNN_Project_Fall_2024_v2.pdf
+          reports/RESULTS.md
+          requirements.txt
+          scripts/audit_dataset.py
+          scripts/check_notebooks.py
+          src/breast_histopathology/__init__.py
+          src/breast_histopathology/dataset_audit.py
+          tests/test_dataset_audit.py
+          tests/test_notebooks.py
+          """.split())
+
+          candidates = sorted(Path('.').glob('*.zip'))
+          if len(candidates) != 1:
+              raise SystemExit(f'Upload exactly one project ZIP to the repository root: {candidates}')
+          archive = candidates[0]
+          if archive.stat().st_size > 2_000_000:
+              raise SystemExit('Uploaded ZIP is larger than the prepared project')
+          if sha256(archive.read_bytes()).hexdigest() != expected_sha:
+              raise SystemExit('ZIP SHA256 does not match the prepared 27-file project: do not import')
+
+          with ZipFile(archive) as src:
+              names = set()
+              records = [x for x in src.infolist() if not x.is_dir()]
+              for entry in records:
+                  name = PurePosixPath(entry.filename)
+                  if name.is_absolute() or '..' in name.parts or '\\' in entry.filename:
+                      raise SystemExit(f'Unsafe archive path: {entry.filename}')
+                  if entry.filename in names:
+                      raise SystemExit(f'Duplicate file: {entry.filename}')
+                  names.add(entry.filename)
+                  mode = (entry.external_attr >> 16) & 0o170000
+                  if mode not in (0, stat.S_IFREG):
+                      raise SystemExit(f'Unsupported archive member: {entry.filename}')
+              if names != expected_paths:
+                  raise SystemExit(f'Unexpected archive contents. Missing: {sorted(expected_paths-names)}; extra: {sorted(names-expected_paths)}')
+              corrupt = src.testzip()
+              if corrupt:
+                  raise SystemExit(f'Corrupt ZIP member: {corrupt}')
+              for entry in records:
+                  target = Path(entry.filename)
+                  if target.exists() and target.as_posix() != 'README.md':
+                      raise SystemExit(f'Import would overwrite an existing file: {entry.filename}')
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(src.read(entry))
+          archive.unlink()
+          print('Verified ZIP SHA256 and imported all 27 prepared project files.')
+          PY
+
+      - name: Run lightweight checks
+        run: |
+          python scripts/check_notebooks.py
+          python -m unittest discover -s tests -v
+
+      - name: Mark import completed
+        run: |
+          cat > docs/IMPORT_STATUS.md <<'EOF'
+          # GitHub import status
+
+          The prepared, SHA256-verified 27-file Phase 2 project archive was imported on the `import/phase2-histopathology` branch.
+          The GitHub Actions import workflow verified the ZIP members, then ran the notebook structural checks and six utility tests.
+          The original dataset and trained weights are not included; full model training and testing were not rerun.
+
+          Review the project and this Pull Request before merging into `main`.
+          EOF
+
+      - name: Commit and push prepared project
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "import: add verified Phase 2 classification notebooks and project files"
+          git push origin HEAD:import/phase2-histopathology
