@@ -1,0 +1,37 @@
+# Sensitive credentials and notebook internals
+.env
+.env.*
+!.env.example
+kaggle.json
+*.key
+.ipynb_checkpoints/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.vscode/
+.idea/
+.DS_Store
+
+# Avoid uploading histopathology images, predictions and clinical data
+data/
+datasets/
+raw_data/
+new_data/
+artifacts/
+outputs/
+checkpoints/
+models/
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.hdf5
+*.keras
+*.onnx
+*.pkl
+*.pickle
+*.zip
+*.rar
+*.csv

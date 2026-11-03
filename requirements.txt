@@ -1,0 +1,18 @@
+# Original work uses PyTorch, not the Keras API required by the assignment.
+# Versions were not locked by the original notebooks; this is a starting point,
+# not a tested exact reproduction of the saved experiment.
+notebook
+jupyterlab
+torch
+torchvision
+torchmetrics
+numpy
+pandas
+scikit-learn
+scikit-image
+matplotlib
+seaborn
+Pillow
+opencv-python-headless
+tqdm
+torchsummary
