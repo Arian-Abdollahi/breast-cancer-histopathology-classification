@@ -7,6 +7,7 @@ on:
     paths:
       - '*.zip'
       - '**/*.zip'
+      - .github/workflows/import-archive.yml
   workflow_dispatch:
 
 permissions:
@@ -89,13 +90,18 @@ jobs:
               if corrupt:
                   raise SystemExit(f'Corrupt ZIP member: {corrupt}')
               for entry in records:
+                  if entry.filename == '.github/workflows/ci.yml':
+                      # GitHub Actions GITHUB_TOKEN cannot commit workflow files.
+                      # Add the verified workflow separately using authorized GitHub access.
+                      print('CI workflow will be added separately through GitHub.')
+                      continue
                   target = Path(entry.filename)
                   if target.exists() and target.as_posix() != 'README.md':
                       raise SystemExit(f'Import would overwrite an existing file: {entry.filename}')
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(src.read(entry))
           archive.unlink()
-          print('Verified ZIP SHA256 and imported all 27 prepared project files.')
+          print('Verified all 27 ZIP members; extracted project files except CI workflow, which is added separately.')
           PY
 
       - name: Run lightweight checks
