@@ -3,7 +3,7 @@ name: Import verified Phase 2 archive
 on:
   push:
     branches:
-      - import/phase2-histopathology
+      - import/phase2-complete
     paths:
       - '*.zip'
       - '**/*.zip'
@@ -90,13 +90,18 @@ jobs:
               if corrupt:
                   raise SystemExit(f'Corrupt ZIP member: {corrupt}')
               for entry in records:
+                  if entry.filename == '.github/workflows/ci.yml':
+                      # GitHub Actions GITHUB_TOKEN cannot commit workflow files.
+                      # Add the verified workflow separately using authorized GitHub access.
+                      print('CI workflow will be added separately through GitHub.')
+                      continue
                   target = Path(entry.filename)
                   if target.exists() and target.as_posix() != 'README.md':
                       raise SystemExit(f'Import would overwrite an existing file: {entry.filename}')
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(src.read(entry))
           archive.unlink()
-          print('Verified ZIP SHA256 and imported all 27 prepared project files.')
+          print('Verified all 27 ZIP members; extracted project files except CI workflow, which is added separately.')
           PY
 
       - name: Run lightweight checks
@@ -109,7 +114,7 @@ jobs:
           cat > docs/IMPORT_STATUS.md <<'EOF'
           # GitHub import status
 
-          The prepared, SHA256-verified 27-file Phase 2 project archive was imported on the `import/phase2-histopathology` branch.
+          The prepared, SHA256-verified 27-file Phase 2 project archive was imported on the `import/phase2-complete` branch.
           The GitHub Actions import workflow verified the ZIP members, then ran the notebook structural checks and six utility tests.
           The original dataset and trained weights are not included; full model training and testing were not rerun.
 
@@ -126,4 +131,4 @@ jobs:
             exit 0
           fi
           git commit -m "import: add verified Phase 2 classification notebooks and project files"
-          git push origin HEAD:import/phase2-histopathology
+          git push origin HEAD:import/phase2-complete

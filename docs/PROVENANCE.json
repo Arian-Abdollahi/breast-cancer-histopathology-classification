@@ -1,0 +1,21 @@
+{
+  "original_uploads": [
+    {
+      "file": "phase2_version1.ipynb",
+      "sha256": "72057be787bc27a1a43d3438dda756c788f966dd61e86b08480e648c3d395aad",
+      "original_bytes": 5809333,
+      "cells": 63,
+      "outputs_removed": 52
+    },
+    {
+      "file": "phase2_version2.ipynb",
+      "sha256": "8bc728aa007b620b949d9e901ac1e6b5c4ae18f3ca22d66a17b1655493cedfc9",
+      "original_bytes": 5816804,
+      "cells": 64,
+      "outputs_removed": 51
+    }
+  ],
+  "assignment_file": "CI_CNN_Project_Fall_2024_v2.pdf",
+  "assignment_sha256": "9a60c4d9c6bb75b8f8f0c40367ec88a06c486987e246b34846387b37c6dbfab9",
+  "note": "Source cells retained verbatim in output-free notebooks; raw originals supplied in separate backup ZIP."
+}
